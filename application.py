@@ -1,38 +1,13 @@
-def board(height,width): #generates board
-    boardheight = []
-    for x in range(height): #creates columns
-        boardheight.append([])
-        for i in range(width): #creates arrays with  blank spaces, each array is 1 row
-            boardheight[x].append("-")
-    return boardheight #returns created array(board)
+from flask import Flask, render_template, session
+from flask_session import Session
+from tempfile import mkdtemp #this is where data is stored
 
+app = Flask(__name__)
 
-
-height = int(input("Enter height of board"))
-width = int(input("Enter width of board"))
-boardreal = board(height,width) #this contains the board
-
-for i in range(height * width):
-    if i % 2 == 0:
-        #PositionPlayer1
-        p1Height = int(input("Enter your column position Player1"))
-        p1Width = int(input("Enter  your row position Player1"))
-        while boardreal[p1Height][p1Width] == "x" or boardreal[p1Height][p1Width] == "o":
-            p1Height = int(input("Not possible, enter your column position Player1"))
-            p1Width = int(input("Not possible, enter your row position Player1"))
-        boardreal[p1Height][p1Width] = "x"
-        print(boardreal)
-    else:
-    #PositionPlayer2
-        p2Height = int(input("Enter your column position Player2"))
-        p2Width = int(input("Enter  your row position Player2"))
-        while boardreal[p2Height][p2Width] == "x" or boardreal[p2Height][p2Width] == "o":
-            p2Height = int(input("Not possible, enter your column position Player2"))
-            p2Width = int(input("Not possible, enter your row position Player2"))
-        boardreal[p2Height][p2Width] = "o"
-        print(boardreal)
-
-############ with win condiiton
+app.config["SESSION_FILE_DIR"] = mkdtemp()
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem" #stores data in files
+Session(app)
 
 def board(height,width): #generates board
     boardheight = []
@@ -41,63 +16,40 @@ def board(height,width): #generates board
         for i in range(width): #creates arrays with  blank spaces, each array is 1 row
             boardheight[x].append("-")
     return boardheight #returns created array(board)
+    
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-def check_win(board, symbol):
-    # check rows for win
-    for row in board:
-        if all(val == symbol for val in row):
-            return True
+@app.route("/registration")
+def registration():
+    return render_template("registration.html")
+    
+@app.route("/login")
+def login():
+    return render_template("login.html")
 
-    # check columns for win
-    for col in range(len(board[0])):
-        if all(board[row][col] == symbol for row in range(len(board))):
-            return True
-
-    # check diagonals for win
-    if all(board[i][i] == symbol for i in range(len(board))):
-        return True
-    if all(board[i][len(board) - i - 1] == symbol for i in range(len(board))):
-        return True
-
-    return False
-
-def check_full(board):
-    for row in board:
-        if '-' in row:
-            return False
-    return True
-
-height = int(input("Enter height of board: "))
-width = int(input("Enter width of board: "))
-boardreal = board(height,width) #this contains the board
-
-for i in range(height * width):
-    if i % 2 == 0:
-        #PositionPlayer1
-        p1Height = int(input("Enter your column position Player1: "))
-        p1Width = int(input("Enter  your row position Player1: "))
-        while boardreal[p1Height][p1Width] == "x" or boardreal[p1Height][p1Width] == "o":
-            p1Height = int(input("Not possible, enter your column position Player1: "))
-            p1Width = int(input("Not possible, enter your row position Player1: "))
-        boardreal[p1Height][p1Width] = "x"
-        if check_win(boardreal, "x"):
-            print("Player 1 wins!")
-            break
-        elif check_full(boardreal):
-            print("It's a draw!")
-            break
-        print(boardreal)
+    
+@app.route("/game")
+def OpenGame():
+    if "board" not in session:
+        turn = "x"
+        height = 4
+        width = 4
+        boardreal = board(height,width)
+        session["turn"] = turn
+        session["height"] = height
+        session["width"] = width
+        session["board"] = boardreal
+        
+        
+    return render_template("game.html", game=session["board"], height=session["height"], width=session["width"], turn=session["turn"])
+    
+@app.route("/play/<int:row>/<int:col>")
+def play(row,col):
+    session["board"][row][col] = session["turn"]
+    if session["turn"] == "x":
+        session["turn"] = "o"
     else:
-        #PositionPlayer2
-        p2Height = int(input("Enter your column position Player2: "))
-        p2Width = int(input("Enter  your row position Player2: "))
-        while boardreal[p2Height][p2Width] == "x" or boardreal[p2Height][p2Width] == "o":
-            p2Height = int(input("Not possible, enter your column position Player2: "))
-            p2Width = int(input("Not possible, enter your row position Player2: "))
-        boardreal[p2Height][p2Width] = "o"
-        if check_win(boardreal, "o"):
-            print("Player 2 wins!")
-            break
-        elif check_full(boardreal):
-            print("It's a draw!")
-            break
+        session["turn"] = "x"
+    return redirect(url_for("game"))
